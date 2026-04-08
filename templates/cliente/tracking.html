@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Rastrear Pedido - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold"><i class="fas fa-search me-2"></i>Rastrear Pedido</h3>
+        <p class="text-muted">Ingrese su número de guía para ver el estado de su entrega</p>
+    </div>
+
+    <!-- Buscador -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('cliente.tracking') }}" class="row g-2 align-items-end">
+                <div class="col">
+                    <label class="form-label fw-semibold">Número de Guía</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                        <input type="text" class="form-control" name="tracking" 
+                               value="{{ tracking_number or '' }}" 
+                               placeholder="Ej: ENV-A1B2C3D4" 
+                               style="text-transform: uppercase;">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if order %}
+    <!-- Resultado del rastreo -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-primary">{{ order.tracking_number }}</h5>
+                <span class="badge bg-{{ order.get_status_color() }} fs-6">{{ order.get_status_display() }}</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Timeline de estado -->
+            <div class="tracking-timeline mb-4">
+                <div class="row text-center">
+                    <div class="col">
+                        <div class="timeline-step {% if order.status in ['en_almacen','asignado','en_transito','entregado'] %}active{% endif %}">
+                            <div class="timeline-icon {% if order.status in ['en_almacen','asignado','en_transito','entregado'] %}bg-success{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-warehouse"></i>
+                            </div>
+                            <small class="d-block mt-1">En Almacén</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="timeline-step {% if order.status in ['asignado','en_transito','entregado'] %}active{% endif %}">
+                            <div class="timeline-icon {% if order.status in ['asignado','en_transito','entregado'] %}bg-success{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <small class="d-block mt-1">Asignado</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="timeline-step {% if order.status in ['en_transito','entregado'] %}active{% endif %}">
+                            <div class="timeline-icon {% if order.status in ['en_transito','entregado'] %}bg-success{% elif order.status == 'en_transito' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <small class="d-block mt-1">En Tránsito</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="timeline-step {% if order.status == 'entregado' %}active{% endif %}">
+                            <div class="timeline-icon {% if order.status == 'entregado' %}bg-success{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <small class="d-block mt-1">Entregado</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 4px;">
+                    {% set progress_map = {'en_almacen': 12, 'asignado': 37, 'en_transito': 62, 'entregado': 100, 'cliente_ausente': 62, 'devolucion': 62} %}
+                    <div class="progress-bar bg-success" style="width: {{ progress_map.get(order.status, 0) }}%"></div>
+                </div>
+            </div>
+
+            <!-- Detalles -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-map-marker-alt me-1 text-danger"></i> Dirección de Entrega</h6>
+                        <p class="mb-0">{{ order.address }}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-clock me-1 text-warning"></i> Tiempo Estimado</h6>
+                        {% if order.eta %}
+                        <p class="mb-0 fs-4 fw-bold text-primary">{{ order.eta.strftime('%H:%M') }}</p>
+                        <small class="text-muted">Hora estimada de llegada</small>
+                        {% elif order.status == 'entregado' %}
+                        <p class="mb-0 text-success fw-bold">
+                            <i class="fas fa-check-circle me-1"></i> Entregado
+                            {% if order.delivered_at %}
+                            el {{ order.delivered_at.strftime('%d/%m/%Y a las %H:%M') }}
+                            {% endif %}
+                        </p>
+                        {% else %}
+                        <p class="mb-0 text-muted">Pendiente de cálculo</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if driver_info %}
+            <div class="border rounded p-3 mt-3">
+                <h6 class="fw-bold mb-2"><i class="fas fa-user me-1 text-primary"></i> Información del Conductor</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <small class="text-muted">Conductor</small>
+                        <p class="fw-bold mb-0">{{ driver_info.name }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Vehículo</small>
+                        <p class="fw-bold mb-0">{{ driver_info.vehicle }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Teléfono</small>
+                        <p class="fw-bold mb-0">{{ driver_info.phone or 'No disponible' }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if route %}
+            <div class="border rounded p-3 mt-3">
+                <h6 class="fw-bold mb-2"><i class="fas fa-route me-1 text-info"></i> Progreso de la Ruta</h6>
+                <div class="d-flex justify-content-between mb-1">
+                    <small>{{ route.get_delivered_count() }} de {{ route.total_orders }} entregas completadas</small>
+                    <small>{{ route.get_progress_pct() }}%</small>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar bg-success" style="width: {{ route.get_progress_pct() }}%"></div>
+                </div>
+                {% if order.sequence_order %}
+                <small class="text-muted mt-1 d-block">Su pedido es la entrega #{{ order.sequence_order }} de {{ route.total_orders }}</small>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Botón de comprobante -->
+            {% if order.status == 'entregado' %}
+            <div class="text-center mt-4">
+                <a href="{{ url_for('cliente.receipt', order_id=order.id) }}" class="btn btn-success btn-lg">
+                    <i class="fas fa-file-alt me-1"></i> Ver Comprobante de Entrega
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mis Pedidos -->
+    {% if my_orders %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Mis Pedidos</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for o in my_orders %}
+            <a href="{{ url_for('cliente.tracking', tracking=o.tracking_number) }}" 
+               class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong class="text-primary">{{ o.tracking_number }}</strong>
+                        <br><small class="text-muted">{{ o.address[:50] }}{% if o.address|length > 50 %}...{% endif %}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-{{ o.get_status_color() }}">{{ o.get_status_display() }}</span>
+                        <br><small class="text-muted">{{ o.created_at.strftime('%d/%m/%Y') if o.created_at else '' }}</small>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

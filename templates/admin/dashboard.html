@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Control - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0"><i class="fas fa-chart-line me-2"></i>Panel de Control</h3>
+            <small class="text-muted">Vista general del sistema de distribución</small>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i> Actualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Pedidos Totales</p>
+                            <h3 class="fw-bold mb-0">{{ total_orders }}</h3>
+                            <small class="text-warning"><i class="fas fa-clock me-1"></i>{{ orders_pending }} pendientes</small>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-boxes-stacked fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">En Tránsito</p>
+                            <h3 class="fw-bold mb-0">{{ orders_in_transit }}</h3>
+                            <small class="text-success"><i class="fas fa-check me-1"></i>{{ orders_delivered }} entregados</small>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-shipping-fast fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Vehículos</p>
+                            <h3 class="fw-bold mb-0">{{ total_vehicles }}</h3>
+                            <small class="text-success"><i class="fas fa-check-circle me-1"></i>{{ vehicles_available }} disponibles</small>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-truck fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Rutas Activas</p>
+                            <h3 class="fw-bold mb-0">{{ routes_active }}</h3>
+                            <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ total_incidents }} incidencias</small>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                            <i class="fas fa-route fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Mapa Principal -->
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-map-marked-alt me-2"></i>Mapa de Rutas Activas</h6>
+                    <span class="badge bg-primary">{{ routes_active }} rutas</span>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 450px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel lateral -->
+        <div class="col-xl-4">
+            <!-- Progreso de Rutas -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2"></i>Progreso de Rutas</h6>
+                </div>
+                <div class="card-body" id="routeProgressContainer" style="max-height: 200px; overflow-y: auto;">
+                    <p class="text-muted text-center" id="noRoutesMsg">Cargando rutas...</p>
+                </div>
+            </div>
+
+            <!-- Capacidad de Vehículos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-weight-hanging me-2"></i>Capacidad de Vehículos</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="capacityChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row g-3 mt-2">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2"></i>Pedidos por Estado</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="ordersStatusChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-chart-bar me-2"></i>Conductores</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="driversChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-tachometer-alt me-2"></i>Métricas Generales</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="fw-semibold">Promedio Capacidad Peso</small>
+                            <small>{{ analytics.avg_capacity_weight }}%</small>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" style="width: {{ analytics.avg_capacity_weight }}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="fw-semibold">Promedio Capacidad Volumen</small>
+                            <small>{{ analytics.avg_capacity_volume }}%</small>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-info" style="width: {{ analytics.avg_capacity_volume }}%"></div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="fw-bold text-primary mb-0">{{ analytics.total_distance }} km</h5>
+                            <small class="text-muted">Distancia Total</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="fw-bold text-info mb-0">{{ analytics.avg_orders_per_route }}</h5>
+                            <small class="text-muted">Pedidos/Ruta Prom.</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="fw-bold text-success mb-0">{{ routes_completed }}</h5>
+                            <small class="text-muted">Rutas Completadas</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="fw-bold text-warning mb-0">{{ total_drivers }}</h5>
+                            <small class="text-muted">Conductores</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const routesData = {{ routes_data|safe }};
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initMap" async defer></script>
+<script>
+    // ===== MAPA =====
+    function initMap() {
+        const map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: { lat: {{ config.WAREHOUSE_LAT|default(10.4806) }}, lng: {{ config.WAREHOUSE_LNG|default(-66.9036) }} },
+            mapTypeControl: false,
+            streetViewControl: false
+        });
+
+        // Marcador del almacén
+        new google.maps.Marker({
+            position: { lat: {{ config.WAREHOUSE_LAT|default(10.4806) }}, lng: {{ config.WAREHOUSE_LNG|default(-66.9036) }} },
+            map: map,
+            title: 'Centro de Distribución',
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            }
+        });
+
+        const colors = ['#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+        const progressContainer = document.getElementById('routeProgressContainer');
+        const noRoutesMsg = document.getElementById('noRoutesMsg');
+
+        if (routesData.length === 0) {
+            noRoutesMsg.textContent = 'No hay rutas activas.';
+            return;
+        }
+
+        noRoutesMsg.style.display = 'none';
+        let progressHTML = '';
+
+        routesData.forEach((route, index) => {
+            const color = colors[index % colors.length];
+
+            // Dibujar marcadores de pedidos
+            route.orders.forEach(order => {
+                if (order.lat && order.lng) {
+                    const marker = new google.maps.Marker({
+                        position: { lat: order.lat, lng: order.lng },
+                        map: map,
+                        title: `${order.sequence_order}. ${order.client_name}`,
+                        label: {
+                            text: String(order.sequence_order),
+                            color: 'white',
+                            fontSize: '11px'
+                        },
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 14,
+                            fillColor: order.status === 'entregado' ? '#2ecc71' : color,
+                            fillOpacity: 0.9,
+                            strokeWeight: 2,
+                            strokeColor: '#fff'
+                        }
+                    });
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `<div style="min-width:180px">
+                            <strong>${order.sequence_order}. ${order.client_name}</strong><br>
+                            <small>${order.address}</small><br>
+                            <span class="badge" style="background:${order.status === 'entregado' ? '#2ecc71' : color}">${order.status}</span><br>
+                            <small>Peso: ${order.weight_kg} kg | Vol: ${order.volume_m3} m³</small>
+                        </div>`
+                    });
+                    marker.addListener('click', () => infoWindow.open(map, marker));
+                }
+            });
+
+            // Dibujar polyline si existe
+            if (route.polyline) {
+                const path = google.maps.geometry ? 
+                    google.maps.geometry.encoding.decodePath(route.polyline) : [];
+                if (path.length > 0) {
+                    new google.maps.Polyline({
+                        path: path,
+                        geodesic: true,
+                        strokeColor: color,
+                        strokeOpacity: 0.8,
+                        strokeWeight: 4,
+                        map: map
+                    });
+                }
+            }
+
+            // Progreso de ruta
+            progressHTML += `
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-semibold" style="color:${color}">
+                            <i class="fas fa-circle me-1" style="font-size:8px"></i>${route.name}
+                        </small>
+                        <small>${route.delivered}/${route.total_orders}</small>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" style="width: ${route.progress}%; background-color: ${color}"></div>
+                    </div>
+                    <small class="text-muted">${route.driver} - ${route.vehicle}</small>
+                </div>`;
+        });
+
+        progressContainer.innerHTML = progressHTML;
+    }
+
+    // ===== GRÁFICOS =====
+    // Pedidos por Estado
+    new Chart(document.getElementById('ordersStatusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['En Almacén', 'En Tránsito', 'Entregados', 'Pendientes'],
+            datasets: [{
+                data: [{{ orders_pending }}, {{ orders_in_transit }}, {{ orders_delivered }}, 
+                       {{ total_orders - orders_pending - orders_in_transit - orders_delivered }}],
+                backgroundColor: ['#6c757d', '#0d6efd', '#198754', '#ffc107'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
+            }
+        }
+    });
+
+    // Conductores
+    new Chart(document.getElementById('driversChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Disponibles', 'En Ruta', 'Total'],
+            datasets: [{
+                label: 'Conductores',
+                data: [{{ drivers_available }}, {{ drivers_in_route }}, {{ total_drivers }}],
+                backgroundColor: ['#198754', '#0d6efd', '#6c757d'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Capacidad de Vehículos
+    const capacityLabels = [];
+    const weightData = [];
+    const volumeData = [];
+    routesData.forEach(r => {
+        capacityLabels.push(r.vehicle);
+        weightData.push(r.weight_pct || 0);
+        volumeData.push(r.volume_pct || 0);
+    });
+
+    if (capacityLabels.length > 0) {
+        new Chart(document.getElementById('capacityChart'), {
+            type: 'bar',
+            data: {
+                labels: capacityLabels,
+                datasets: [
+                    { label: 'Peso %', data: weightData, backgroundColor: '#0d6efd', borderRadius: 4 },
+                    { label: 'Volumen %', data: volumeData, backgroundColor: '#0dcaf0', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { y: { beginAtZero: true, max: 100 } }
+            }
+        });
+    } else {
+        document.getElementById('capacityChart').parentElement.innerHTML = 
+            '<p class="text-muted text-center mt-4">No hay datos de capacidad disponibles.</p>';
+    }
+</script>
+{% endblock %}

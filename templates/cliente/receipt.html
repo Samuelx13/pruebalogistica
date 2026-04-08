@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Comprobante de Entrega - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 650px;">
+    <a href="{{ url_for('cliente.tracking', tracking=order.tracking_number) }}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="fas fa-arrow-left me-1"></i> Volver al Rastreo
+    </a>
+
+    <!-- Comprobante -->
+    <div class="card border-0 shadow-sm" id="receipt">
+        <div class="card-body p-4">
+            <!-- Encabezado -->
+            <div class="text-center mb-4">
+                <i class="fas fa-truck-fast fa-2x text-primary mb-2"></i>
+                <h4 class="fw-bold text-primary">LogiTrack</h4>
+                <p class="text-muted mb-0">Sistema de Distribución y Logística</p>
+                <hr>
+                <h5 class="fw-bold"><i class="fas fa-check-circle text-success me-2"></i>Comprobante de Entrega</h5>
+            </div>
+
+            <!-- Datos del pedido -->
+            <div class="row mb-3">
+                <div class="col-6">
+                    <small class="text-muted">Número de Guía</small>
+                    <p class="fw-bold text-primary fs-5 mb-0">{{ order.tracking_number }}</p>
+                </div>
+                <div class="col-6 text-end">
+                    <small class="text-muted">Estado</small>
+                    <p class="mb-0">
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-double me-1"></i>Entregado
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Información de entrega -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="fw-bold text-muted mb-2">
+                            <i class="fas fa-user me-1"></i> Destinatario
+                        </h6>
+                        <p class="fw-bold mb-1">{{ order.client_name }}</p>
+                        {% if order.client_phone %}
+                        <small class="text-muted d-block"><i class="fas fa-phone me-1"></i>{{ order.client_phone }}</small>
+                        {% endif %}
+                        {% if order.client_email %}
+                        <small class="text-muted d-block"><i class="fas fa-envelope me-1"></i>{{ order.client_email }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="fw-bold text-muted mb-2">
+                            <i class="fas fa-map-marker-alt me-1"></i> Dirección
+                        </h6>
+                        <p class="mb-0">{{ order.address }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalles del paquete -->
+            <div class="border rounded p-3 mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                    <i class="fas fa-box me-1"></i> Detalles del Paquete
+                </h6>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <small class="text-muted">Peso</small>
+                        <p class="fw-bold mb-0">{{ order.weight_kg }} kg</p>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Volumen</small>
+                        <p class="fw-bold mb-0">{{ order.volume_m3 }} m³</p>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Descripción</small>
+                        <p class="fw-bold mb-0">{{ order.description or 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tiempos -->
+            <div class="border rounded p-3 mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                    <i class="fas fa-clock me-1"></i> Registro de Tiempos
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">Fecha de Creación</small>
+                        <p class="fw-bold mb-1">{{ order.created_at.strftime('%d/%m/%Y %H:%M') if order.created_at else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Fecha de Entrega</small>
+                        <p class="fw-bold mb-1 text-success">
+                            <i class="fas fa-check me-1"></i>
+                            {{ order.delivered_at.strftime('%d/%m/%Y %H:%M') if order.delivered_at else 'N/A' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conductor -->
+            {% if driver_info %}
+            <div class="border rounded p-3 mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                    <i class="fas fa-id-card me-1"></i> Conductor Responsable
+                </h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <small class="text-muted">Nombre</small>
+                        <p class="fw-bold mb-0">{{ driver_info.name }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Vehículo</small>
+                        <p class="fw-bold mb-0">{{ driver_info.vehicle }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Ruta</small>
+                        <p class="fw-bold mb-0">{{ route.name if route else 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Pie del comprobante -->
+            <hr>
+            <div class="text-center">
+                <small class="text-muted">
+                    Este comprobante fue generado automáticamente por el sistema LogiTrack.<br>
+                    ID: DO-2026-02 | Sistema de Optimización de Cadena de Suministro
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón imprimir -->
+    <div class="text-center mt-3 mb-4">
+        <button onclick="window.print()" class="btn btn-outline-primary">
+            <i class="fas fa-print me-1"></i> Imprimir Comprobante
+        </button>
+    </div>
+</div>
+{% endblock %}

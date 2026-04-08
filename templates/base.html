@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LogiTrack - Sistema de Distribución{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    {% if current_user.is_authenticated %}
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-truck-fast me-2"></i>LogiTrack
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-chart-line me-1"></i> Panel de Control
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.fleet' %}active{% endif %}" href="{{ url_for('admin.fleet') }}">
+                            <i class="fas fa-truck me-1"></i> Flota
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.drivers' %}active{% endif %}" href="{{ url_for('admin.drivers') }}">
+                            <i class="fas fa-id-card me-1"></i> Conductores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.orders' %}active{% endif %}" href="{{ url_for('admin.orders') }}">
+                            <i class="fas fa-boxes-stacked me-1"></i> Pedidos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.routes_view' %}active{% endif %}" href="{{ url_for('admin.routes_view') }}">
+                            <i class="fas fa-route me-1"></i> Rutas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'admin.exceptions' %}active{% endif %}" href="{{ url_for('admin.exceptions') }}">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Excepciones
+                        </a>
+                    </li>
+                    {% elif current_user.role == 'conductor' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'conductor.dashboard' %}active{% endif %}" href="{{ url_for('conductor.dashboard') }}">
+                            <i class="fas fa-map-marked-alt me-1"></i> Mi Ruta
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'conductor.report_incident' %}active{% endif %}" href="{{ url_for('conductor.report_incident') }}">
+                            <i class="fas fa-flag me-1"></i> Reportar Novedad
+                        </a>
+                    </li>
+                    {% elif current_user.role == 'cliente' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'cliente.tracking' %}active{% endif %}" href="{{ url_for('cliente.tracking') }}">
+                            <i class="fas fa-search me-1"></i> Rastrear Pedido
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ current_user.get_full_name() }}
+                            <span class="badge bg-light text-primary ms-1">{{ current_user.role|capitalize }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text text-muted"><small>{{ current_user.email }}</small></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    <div class="container-fluid mt-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {% if category == 'success' %}
+                        <i class="fas fa-check-circle me-1"></i>
+                    {% elif category == 'danger' %}
+                        <i class="fas fa-times-circle me-1"></i>
+                    {% elif category == 'warning' %}
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                    {% elif category == 'info' %}
+                        <i class="fas fa-info-circle me-1"></i>
+                    {% endif %}
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="{% block main_class %}container-fluid py-3{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    {% block footer %}
+    <footer class="bg-dark text-light py-3 mt-4">
+        <div class="container-fluid text-center">
+            <small>&copy; 2026 LogiTrack - Sistema de Optimización de Cadena de Suministro | ID: DO-2026-02</small>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

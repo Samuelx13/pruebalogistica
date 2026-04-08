@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Pedidos - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0"><i class="fas fa-boxes-stacked me-2"></i>Gestión de Pedidos</h3>
+            <small class="text-muted">Administrar pedidos y cargas masivas</small>
+        </div>
+        <div>
+            <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="fas fa-file-upload me-1"></i> Carga Masiva
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">
+                <i class="fas fa-plus me-1"></i> Agregar Pedido
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form method="GET" class="row align-items-center g-2">
+                <div class="col-auto">
+                    <label class="form-label mb-0 small fw-semibold">Filtrar por estado:</label>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select form-select-sm" name="status" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option value="en_almacen" {% if status_filter == 'en_almacen' %}selected{% endif %}>En Almacén</option>
+                        <option value="asignado" {% if status_filter == 'asignado' %}selected{% endif %}>Asignado</option>
+                        <option value="en_transito" {% if status_filter == 'en_transito' %}selected{% endif %}>En Tránsito</option>
+                        <option value="entregado" {% if status_filter == 'entregado' %}selected{% endif %}>Entregado</option>
+                        <option value="cliente_ausente" {% if status_filter == 'cliente_ausente' %}selected{% endif %}>Cliente Ausente</option>
+                        <option value="devolucion" {% if status_filter == 'devolucion' %}selected{% endif %}>Devolución</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <span class="badge bg-secondary">{{ orders|length }} pedidos</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Pedidos -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nº Guía</th>
+                            <th>Cliente</th>
+                            <th>Dirección</th>
+                            <th>Peso (kg)</th>
+                            <th>Vol (m³)</th>
+                            <th>Coordenadas</th>
+                            <th>Ruta</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><strong class="text-primary">{{ order.tracking_number }}</strong></td>
+                            <td>
+                                {{ order.client_name }}
+                                {% if order.client_phone %}
+                                <br><small class="text-muted"><i class="fas fa-phone me-1"></i>{{ order.client_phone }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ order.address[:50] }}{% if order.address|length > 50 %}...{% endif %}</small>
+                            </td>
+                            <td>{{ order.weight_kg }}</td>
+                            <td>{{ order.volume_m3 }}</td>
+                            <td>
+                                {% if order.lat and order.lng %}
+                                    <span class="badge bg-success"><i class="fas fa-map-pin me-1"></i>OK</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Sin geo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.route %}
+                                    <small class="badge bg-info">{{ order.route.name }}</small>
+                                    <br><small class="text-muted">Seq: {{ order.sequence_order }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ order.get_status_color() }}">{{ order.get_status_display() }}</span>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin.orders_delete', order_id=order.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar pedido {{ order.tracking_number }}?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not orders %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-boxes-stacked fa-2x mb-2 d-block"></i>
+                                No hay pedidos registrados.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Pedido -->
+<div class="modal fade" id="addOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.orders_add') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Agregar Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre del Cliente *</label>
+                            <input type="text" class="form-control" name="client_name" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="client_phone" placeholder="Teléfono">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="client_email" placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dirección de Entrega *</label>
+                        <input type="text" class="form-control" name="address" placeholder="Dirección completa para geocodificación" required>
+                        <div class="form-text">La dirección será geocodificada automáticamente con Google Maps.</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Peso (kg) *</label>
+                            <input type="number" step="0.1" class="form-control" name="weight_kg" value="1.0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Volumen (m³) *</label>
+                            <input type="number" step="0.001" class="form-control" name="volume_m3" value="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción del Paquete</label>
+                        <input type="text" class="form-control" name="description" placeholder="Descripción breve">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Instrucciones Especiales</label>
+                        <textarea class="form-control" name="special_instructions" rows="2" placeholder="Instrucciones para el conductor"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Crear Pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Carga Masiva -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.orders_upload') }}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-upload me-2"></i>Carga Masiva de Pedidos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="fas fa-info-circle me-1"></i> Formato del archivo</h6>
+                        <p class="mb-1 small">El archivo CSV o Excel debe contener las siguientes columnas:</p>
+                        <ul class="mb-0 small">
+                            <li><strong>cliente_nombre</strong> (obligatorio)</li>
+                            <li><strong>direccion</strong> (obligatorio)</li>
+                            <li><strong>peso_kg</strong> (obligatorio)</li>
+                            <li>volumen_m3 (opcional)</li>
+                            <li>telefono (opcional)</li>
+                            <li>email (opcional)</li>
+                            <li>ciudad (opcional)</li>
+                            <li>descripcion (opcional)</li>
+                            <li>instrucciones_especiales (opcional)</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar Archivo *</label>
+                        <input type="file" class="form-control" name="file" accept=".csv,.xlsx,.xls" required>
+                        <div class="form-text">Formatos aceptados: CSV, Excel (.xlsx, .xls)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-upload me-1"></i> Procesar Archivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

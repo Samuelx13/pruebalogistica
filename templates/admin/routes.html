@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Rutas - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0"><i class="fas fa-route me-2"></i>Gestión de Rutas</h3>
+            <small class="text-muted">Optimizar y administrar rutas de distribución</small>
+        </div>
+        <div>
+            <form method="POST" action="{{ url_for('admin.routes_optimize') }}" class="d-inline">
+                <input type="hidden" name="use_google_maps" value="true">
+                <button type="submit" class="btn btn-success" onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin me-1\'></i> Calculando...'; this.form.submit();">
+                    <i class="fas fa-magic me-1"></i> Calcular Rutas Óptimas
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div class="alert alert-info d-flex align-items-center mb-4">
+        <i class="fas fa-info-circle fa-lg me-3"></i>
+        <div>
+            <strong>¿Cómo funciona?</strong> El algoritmo toma los pedidos en estado "En Almacén" sin ruta asignada, 
+            los agrupa por capacidad de vehículo disponible, y ordena las entregas usando el algoritmo del vecino más cercano 
+            optimizado con la API de Google Maps para calcular la ruta más eficiente.
+        </div>
+    </div>
+
+    <!-- Tabla de Rutas -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ruta</th>
+                            <th>Conductor</th>
+                            <th>Vehículo</th>
+                            <th>Pedidos</th>
+                            <th>Distancia</th>
+                            <th>Duración Est.</th>
+                            <th>Capacidad Peso</th>
+                            <th>Capacidad Vol.</th>
+                            <th>Progreso</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in routes %}
+                        <tr>
+                            <td>
+                                <strong>{{ route.name }}</strong>
+                                <br><small class="text-muted">{{ route.date.strftime('%d/%m/%Y') if route.date else '-' }}</small>
+                            </td>
+                            <td>{{ route.driver.get_full_name() if route.driver else 'Sin asignar' }}</td>
+                            <td>
+                                {% if route.vehicle %}
+                                    <span class="badge bg-light text-dark">{{ route.vehicle.plate_number }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold">{{ route.get_delivered_count() }}/{{ route.total_orders or 0 }}</span>
+                            </td>
+                            <td>{{ route.total_distance_km or 0 }} km</td>
+                            <td>{{ route.total_duration_min|round(0)|int if route.total_duration_min else 0 }} min</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px; width: 60px;">
+                                        <div class="progress-bar {% if route.capacity_used_weight_pct and route.capacity_used_weight_pct > 90 %}bg-danger{% elif route.capacity_used_weight_pct and route.capacity_used_weight_pct > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                                             style="width: {{ route.capacity_used_weight_pct or 0 }}%"></div>
+                                    </div>
+                                    <small>{{ route.capacity_used_weight_pct or 0 }}%</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px; width: 60px;">
+                                        <div class="progress-bar bg-info"
+                                             style="width: {{ route.capacity_used_volume_pct or 0 }}%"></div>
+                                    </div>
+                                    <small>{{ route.capacity_used_volume_pct or 0 }}%</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px; width: 60px;">
+                                        <div class="progress-bar bg-primary" style="width: {{ route.get_progress_pct() }}%"></div>
+                                    </div>
+                                    <small>{{ route.get_progress_pct() }}%</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ route.get_status_color() }}">{{ route.get_status_display() }}</span>
+                            </td>
+                            <td>
+                                {% if route.status == 'planificada' %}
+                                <form method="POST" action="{{ url_for('admin.route_start', route_id=route.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Iniciar Ruta">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if route.status in ['planificada', 'en_progreso'] %}
+                                <form method="POST" action="{{ url_for('admin.route_cancel', route_id=route.id) }}" class="d-inline"
+                                      onsubmit="return confirm('¿Cancelar esta ruta? Los pedidos serán liberados.')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar Ruta">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                        data-bs-target="#routeDetailModal{{ route.id }}" title="Ver Detalle">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not routes %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                <i class="fas fa-route fa-2x mb-2 d-block"></i>
+                                No hay rutas creadas. Use el botón "Calcular Rutas Óptimas" para generar rutas automáticamente.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales de Detalle de Rutas (fuera de la tabla) -->
+{% for route in routes %}
+<div class="modal fade" id="routeDetailModal{{ route.id }}" tabindex="-1" aria-labelledby="routeDetailLabel{{ route.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="routeDetailLabel{{ route.id }}">
+                    <i class="fas fa-route me-2"></i>{{ route.name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">Conductor</small>
+                        <p class="fw-bold mb-0">{{ route.driver.get_full_name() if route.driver else 'Sin asignar' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Vehículo</small>
+                        <p class="fw-bold mb-0">{{ route.vehicle.plate_number if route.vehicle else '-' }} {{ route.vehicle.brand if route.vehicle else '' }} {{ route.vehicle.model if route.vehicle else '' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Estado</small>
+                        <p class="mb-0"><span class="badge bg-{{ route.get_status_color() }}">{{ route.get_status_display() }}</span></p>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3">Secuencia de Entregas</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Guía</th>
+                                <th>Cliente</th>
+                                <th>Dirección</th>
+                                <th>Peso</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in route.orders %}
+                            <tr>
+                                <td><span class="badge bg-primary rounded-circle">{{ order.sequence_order }}</span></td>
+                                <td><small>{{ order.tracking_number }}</small></td>
+                                <td>{{ order.client_name }}</td>
+                                <td><small>{{ order.address[:40] }}...</small></td>
+                                <td>{{ order.weight_kg }} kg</td>
+                                <td><span class="badge bg-{{ order.get_status_color() }}">{{ order.get_status_display() }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

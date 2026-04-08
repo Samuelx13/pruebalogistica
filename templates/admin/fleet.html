@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Flota - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0"><i class="fas fa-truck me-2"></i>Gestión de Flota</h3>
+            <small class="text-muted">Administrar vehículos del sistema</small>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+            <i class="fas fa-plus me-1"></i> Agregar Vehículo
+        </button>
+    </div>
+
+    <!-- Tabla de Vehículos -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Placa</th>
+                            <th>Marca / Modelo</th>
+                            <th>Año</th>
+                            <th>Capacidad Peso (kg)</th>
+                            <th>Capacidad Volumen (m³)</th>
+                            <th>Combustible</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr>
+                            <td><strong>{{ vehicle.plate_number }}</strong></td>
+                            <td>{{ vehicle.brand }} {{ vehicle.model }}</td>
+                            <td>{{ vehicle.year or '-' }}</td>
+                            <td>{{ vehicle.max_weight_kg }} kg</td>
+                            <td>{{ vehicle.max_volume_m3 }} m³</td>
+                            <td>{{ vehicle.fuel_type or '-' }}</td>
+                            <td>
+                                {% if vehicle.status == 'disponible' %}
+                                    <span class="badge bg-success">Disponible</span>
+                                {% elif vehicle.status == 'en_ruta' %}
+                                    <span class="badge bg-primary">En Ruta</span>
+                                {% elif vehicle.status == 'mantenimiento' %}
+                                    <span class="badge bg-warning">Mantenimiento</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal"
+                                        data-bs-target="#editVehicleModal{{ vehicle.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('admin.fleet_delete', vehicle_id=vehicle.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar este vehículo?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not vehicles %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-truck fa-2x mb-2 d-block"></i>
+                                No hay vehículos registrados.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales de Edición de Vehículos (fuera de la tabla) -->
+{% for vehicle in vehicles %}
+<div class="modal fade" id="editVehicleModal{{ vehicle.id }}" tabindex="-1" aria-labelledby="editVehicleLabel{{ vehicle.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.fleet_edit', vehicle_id=vehicle.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editVehicleLabel{{ vehicle.id }}">Editar Vehículo {{ vehicle.plate_number }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Placa</label>
+                        <input type="text" class="form-control" name="plate_number" value="{{ vehicle.plate_number }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" name="brand" value="{{ vehicle.brand }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-control" name="model" value="{{ vehicle.model }}" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Año</label>
+                            <input type="number" class="form-control" name="year" value="{{ vehicle.year or '' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Peso Máx (kg)</label>
+                            <input type="number" step="0.1" class="form-control" name="max_weight_kg" value="{{ vehicle.max_weight_kg }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Volumen Máx (m³)</label>
+                            <input type="number" step="0.01" class="form-control" name="max_volume_m3" value="{{ vehicle.max_volume_m3 }}" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Combustible</label>
+                            <select class="form-select" name="fuel_type">
+                                <option value="Gasolina" {% if vehicle.fuel_type == 'Gasolina' %}selected{% endif %}>Gasolina</option>
+                                <option value="Diésel" {% if vehicle.fuel_type == 'Diésel' %}selected{% endif %}>Diésel</option>
+                                <option value="GNV" {% if vehicle.fuel_type == 'GNV' %}selected{% endif %}>GNV</option>
+                                <option value="Eléctrico" {% if vehicle.fuel_type == 'Eléctrico' %}selected{% endif %}>Eléctrico</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" name="status">
+                                <option value="disponible" {% if vehicle.status == 'disponible' %}selected{% endif %}>Disponible</option>
+                                <option value="en_ruta" {% if vehicle.status == 'en_ruta' %}selected{% endif %}>En Ruta</option>
+                                <option value="mantenimiento" {% if vehicle.status == 'mantenimiento' %}selected{% endif %}>Mantenimiento</option>
+                                <option value="inactivo" {% if vehicle.status == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal Agregar Vehículo -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.fleet_add') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Agregar Vehículo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Placa *</label>
+                        <input type="text" class="form-control" name="plate_number" placeholder="Ej: ABC-123" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marca *</label>
+                            <input type="text" class="form-control" name="brand" placeholder="Ej: Toyota" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Modelo *</label>
+                            <input type="text" class="form-control" name="model" placeholder="Ej: Hilux" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Año</label>
+                            <input type="number" class="form-control" name="year" placeholder="2024">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Peso Máx (kg) *</label>
+                            <input type="number" step="0.1" class="form-control" name="max_weight_kg" value="1000" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Volumen Máx (m³) *</label>
+                            <input type="number" step="0.01" class="form-control" name="max_volume_m3" value="10" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Combustible</label>
+                        <select class="form-select" name="fuel_type">
+                            <option value="Gasolina">Gasolina</option>
+                            <option value="Diésel">Diésel</option>
+                            <option value="GNV">GNV</option>
+                            <option value="Eléctrico">Eléctrico</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

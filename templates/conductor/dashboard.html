@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Ruta - LogiTrack Conductor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if not driver %}
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+        <h5>Perfil de conductor no encontrado</h5>
+        <p>Contacte al administrador para que le asigne un perfil de conductor.</p>
+    </div>
+    {% else %}
+
+    <!-- Header del conductor -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <i class="fas fa-boxes-stacked fa-lg text-primary mb-1"></i>
+                    <h4 class="fw-bold mb-0">{{ total_assigned }}</h4>
+                    <small class="text-muted">Asignados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <i class="fas fa-clock fa-lg text-warning mb-1"></i>
+                    <h4 class="fw-bold mb-0">{{ pending }}</h4>
+                    <small class="text-muted">Pendientes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <i class="fas fa-check-circle fa-lg text-success mb-1"></i>
+                    <h4 class="fw-bold mb-0">{{ delivered }}</h4>
+                    <small class="text-muted">Entregados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    {% if route %}
+                    <div class="progress mb-1" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ route.get_progress_pct() }}%"></div>
+                    </div>
+                    <h4 class="fw-bold mb-0">{{ route.get_progress_pct() }}%</h4>
+                    {% else %}
+                    <h4 class="fw-bold mb-0">-</h4>
+                    {% endif %}
+                    <small class="text-muted">Progreso</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not route %}
+    <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+        <h5>Sin ruta asignada</h5>
+        <p class="mb-0">No tiene rutas activas en este momento. Espere a que el administrador le asigne una ruta.</p>
+    </div>
+    {% else %}
+
+    <!-- Info de la ruta -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <strong class="text-primary"><i class="fas fa-route me-1"></i>{{ route.name }}</strong>
+                    <span class="badge bg-{{ route.get_status_color() }} ms-2">{{ route.get_status_display() }}</span>
+                </div>
+                <div>
+                    {% if route.vehicle %}
+                    <small class="text-muted me-3"><i class="fas fa-truck me-1"></i>{{ route.vehicle.plate_number }}</small>
+                    {% endif %}
+                    <small class="text-muted"><i class="fas fa-road me-1"></i>{{ route.total_distance_km or 0 }} km</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de entregas -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-list-ol me-2"></i>Secuencia de Entregas</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for order in orders %}
+            <div class="list-group-item {% if order.status == 'entregado' %}bg-light{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-start flex-grow-1">
+                        <!-- Número de secuencia -->
+                        <div class="me-3 text-center" style="min-width: 40px;">
+                            {% if order.status == 'entregado' %}
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            {% elif order.status == 'en_transito' %}
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            {% elif order.status == 'cliente_ausente' %}
+                            <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                <i class="fas fa-user-slash"></i>
+                            </div>
+                            {% elif order.status == 'devolucion' %}
+                            <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                <i class="fas fa-undo"></i>
+                            </div>
+                            {% else %}
+                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                <strong>{{ order.sequence_order }}</strong>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Detalles -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ order.client_name }}</strong>
+                                <span class="badge bg-{{ order.get_status_color() }}">{{ order.get_status_display() }}</span>
+                            </div>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ order.address }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-weight-hanging me-1"></i>{{ order.weight_kg }} kg
+                                | <i class="fas fa-cube me-1"></i>{{ order.volume_m3 }} m³
+                                {% if order.eta %}
+                                | <i class="fas fa-clock me-1"></i>ETA: {{ order.eta.strftime('%H:%M') }}
+                                {% endif %}
+                            </small>
+
+                            <!-- Botones de acción -->
+                            {% if order.status not in ['entregado', 'devolucion'] %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('conductor.delivery_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-eye me-1"></i>Ver Detalle
+                                </a>
+                                <form method="POST" action="{{ url_for('conductor.update_delivery_status', order_id=order.id) }}" class="d-inline">
+                                    {% if order.status in ['asignado'] %}
+                                    <input type="hidden" name="status" value="en_transito">
+                                    <button type="submit" class="btn btn-sm btn-primary me-1">
+                                        <i class="fas fa-truck me-1"></i>En Tránsito
+                                    </button>
+                                    {% endif %}
+                                </form>
+                                <form method="POST" action="{{ url_for('conductor.update_delivery_status', order_id=order.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="entregado">
+                                    <button type="submit" class="btn btn-sm btn-success me-1">
+                                        <i class="fas fa-check me-1"></i>Entregado
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('conductor.update_delivery_status', order_id=order.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="cliente_ausente">
+                                    <button type="submit" class="btn btn-sm btn-warning me-1">
+                                        <i class="fas fa-user-slash me-1"></i>Ausente
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('conductor.update_delivery_status', order_id=order.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="devolucion">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-undo me-1"></i>Devolución
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif order.status == 'entregado' and order.delivered_at %}
+                            <small class="text-success d-block mt-1">
+                                <i class="fas fa-check-double me-1"></i>Entregado: {{ order.delivered_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not orders %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay entregas en esta ruta.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

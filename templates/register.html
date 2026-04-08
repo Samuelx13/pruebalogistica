@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Registro - LogiTrack{% endblock %}
+{% block body_class %}bg-gradient-primary{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center py-5">
+        <div class="col-md-6 col-lg-5">
+            <div class="text-center mb-4">
+                <div class="login-logo">
+                    <i class="fas fa-truck-fast fa-3x text-primary"></i>
+                </div>
+                <h2 class="fw-bold text-primary mt-3">LogiTrack</h2>
+                <p class="text-muted">Crear una cuenta nueva</p>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-center mb-4">Registro de Usuario</h5>
+
+                    <form method="POST" action="{{ url_for('auth.register') }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">
+                                    <i class="fas fa-user me-1"></i> Nombre *
+                                </label>
+                                <input type="text" class="form-control" id="first_name" name="first_name"
+                                       placeholder="Su nombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">
+                                    <i class="fas fa-user me-1"></i> Apellido *
+                                </label>
+                                <input type="text" class="form-control" id="last_name" name="last_name"
+                                       placeholder="Su apellido" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-at me-1"></i> Nombre de Usuario *
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   placeholder="Elija un nombre de usuario" minlength="3" required>
+                            <div class="form-text">Mínimo 3 caracteres.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i> Correo Electrónico *
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   placeholder="correo@ejemplo.com" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">
+                                <i class="fas fa-phone me-1"></i> Teléfono
+                            </label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   placeholder="Número de teléfono (opcional)">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-1"></i> Contraseña *
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password"
+                                       placeholder="Mínimo 6 caracteres" minlength="6" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="confirm_password" class="form-label">
+                                    <i class="fas fa-lock me-1"></i> Confirmar *
+                                </label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                                       placeholder="Repita la contraseña" minlength="6" required>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 mt-2">
+                            <small><i class="fas fa-info-circle me-1"></i> 
+                            Al registrarse se creará una cuenta de <strong>Cliente</strong>. 
+                            Para roles de Administrador o Conductor, contacte al administrador del sistema.</small>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-1"></i> Crear Cuenta
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-light text-center py-3">
+                    <span class="text-muted">¿Ya tiene cuenta?</span>
+                    <a href="{{ url_for('auth.login') }}" class="text-primary fw-semibold ms-1">Iniciar Sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirm_password').value;
+        if (password !== confirm) {
+            e.preventDefault();
+            alert('Las contraseñas no coinciden.');
+        }
+    });
+</script>
+{% endblock %}
