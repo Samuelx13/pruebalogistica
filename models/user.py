@@ -15,6 +15,10 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     phone = db.Column(db.String(20), nullable=True)
+    cedula = db.Column(db.String(15), unique=True, nullable=True, index=True)  # V-12345678
+    principal_address = db.Column(db.String(300), nullable=True)
+    principal_lat = db.Column(db.Float, nullable=True)
+    principal_lng = db.Column(db.Float, nullable=True)
     is_active_user = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

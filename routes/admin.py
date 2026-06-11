@@ -15,6 +15,44 @@ from datetime import datetime
 import os
 import json
 
+# Blueprint para API públicas (geocodificación)
+api_bp = Blueprint('api', __name__)
+
+
+@api_bp.route('/api/geocode')
+def api_geocode():
+    """Endpoint público para geocodificar direcciones."""
+    address = request.args.get('address', '')
+    if not address:
+        return jsonify({'success': False, 'error': 'Dirección requerida'})
+    
+    result = geocode_address(address)
+    return jsonify(result)
+
+
+@api_bp.route('/api/reverse-geocode')
+def api_reverse_geocode():
+    """Endpoint público para reverse geocodificación."""
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    
+    if not lat or not lng:
+        return jsonify({'success': False, 'error': 'Coordenadas requeridas'})
+    
+    # Usar Nominatim para reverse geocoding
+    try:
+        import requests as req
+        url = f"https://nominatim.openstreetmap.org/reverse"
+        params = {'lat': lat, 'lng': lng, 'format': 'json'}
+        resp = req.get(url, params=params, timeout=5)
+        data = resp.json()
+        return jsonify({
+            'success': True,
+            'formatted_address': data.get('display_name', '')
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
@@ -312,16 +350,28 @@ def orders():
     return render_template('admin/orders.html', orders=orders_list, status_filter=status_filter)
 
 
+from services.user_service import lookup_user_by_cedula
+
+@admin_bp.route('/api/user-by-cedula')
+@login_required
+@admin_required
+def api_user_by_cedula():
+    cedula = request.args.get('cedula', '').strip().upper()
+    user_data = lookup_user_by_cedula(cedula)
+    return jsonify(user_data or {})
+
 @admin_bp.route('/orders/add', methods=['POST'])
 @login_required
 @admin_required
 def orders_add():
+    cedula = request.form.get('cedula', '').strip().upper()
     client_name = request.form.get('client_name', '').strip()
     address = request.form.get('address', '').strip()
     weight_kg = request.form.get('weight_kg', 1.0, type=float)
     volume_m3 = request.form.get('volume_m3', 0.01, type=float)
     client_phone = request.form.get('client_phone', '').strip()
     client_email = request.form.get('client_email', '').strip()
+    client_user_id = request.form.get('client_user_id', type=int)
     description = request.form.get('description', '').strip()
     special_instructions = request.form.get('special_instructions', '').strip()
 
@@ -330,15 +380,28 @@ def orders_add():
         return redirect(url_for('admin.orders'))
 
     # Geocodificar dirección
+    # Si hay cédula registrada, usar datos del cliente
+    if cedula:
+        user_data = lookup_user_by_cedula(cedula)
+        if user_data:
+            client_user_id = user_data['id']
+            client_name = client_name or user_data['full_name']
+            client_phone = client_phone or user_data['phone']
+            client_email = client_email or user_data['email']
+            if not address and user_data['address']:
+                address = user_data['address']
+                flash('Datos del cliente cargados desde cédula. Dirección principal utilizada.', 'info')
+
     geo = geocode_address(address)
 
     order = Order(
+        client_user_id=client_user_id,
         client_name=client_name,
         client_phone=client_phone if client_phone else None,
         client_email=client_email if client_email else None,
         address=address,
-        lat=geo.get('lat'),
-        lng=geo.get('lng'),
+    lat=request.form.get('lat', type=float) or geo.get('lat'),
+    lng=request.form.get('lng', type=float) or geo.get('lng'),
         weight_kg=weight_kg,
         volume_m3=volume_m3,
         description=description if description else None,
@@ -417,8 +480,8 @@ def orders_delete(order_id):
 def routes_view():
     routes_list = Route.query.order_by(Route.created_at.desc()).all()
     return render_template('admin/routes.html',
-                           routes=routes_list,
-                           google_maps_key=current_app.config['GOOGLE_MAPS_API_KEY'])
+    routes=routes_list,
+    google_maps_key=current_app.config['GOOGLE_MAPS_API_KEY'])
 
 
 @admin_bp.route('/routes/optimize', methods=['POST'])

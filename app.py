@@ -27,14 +27,15 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Registrar Blueprints
+# Registrar Blueprints
     from routes.auth import auth_bp
-    from routes.admin import admin_bp
+    from routes.admin import admin_bp, api_bp
     from routes.conductor import conductor_bp
     from routes.cliente import cliente_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(api_bp)  # API de geocodificación
     app.register_blueprint(conductor_bp)
     app.register_blueprint(cliente_bp)
 

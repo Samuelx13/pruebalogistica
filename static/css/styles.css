@@ -177,6 +177,11 @@ body {
     border-bottom: 1px solid #eee;
 }
 
+.modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
 /* Forms */
 .form-control, .form-select {
     border-radius: 8px;

@@ -63,6 +63,29 @@
                             <input type="tel" class="form-control" id="phone" name="phone"
                                    placeholder="Número de teléfono (opcional)">
                         </div>
+                        <div class="mb-3">
+                            <label for="cedula" class="form-label">
+                                <i class="fas fa-id-card me-1"></i> Cédula de Identidad *
+                            </label>
+                            <input type="text" class="form-control" id="cedula" name="cedula"
+                                   placeholder="V-12345678" pattern="[V|E]G?-\\d{7,8}" required>
+                            <div class="form-text">Formato: V-12345678 o E-1234567</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i> Dirección Principal *
+                            </label>
+                            <input type="text" class="form-control mb-2" id="principal_address" name="principal_address" 
+                                   placeholder="Escriba su dirección para centrar el mapa" required>
+                            <button type="button" class="btn btn-outline-info btn-sm mb-2" onclick="geocodeToMap('principal_address')">
+                                📍 Centrar en Dirección
+                            </button>
+                            <div id="registerMap" style="height: 250px; border: 2px solid #dee2e6; border-radius: 0.375rem; background: #f8f9fa;"></div>
+                            <input type="hidden" id="principal_lat" name="principal_lat">
+                            <input type="hidden" id="principal_lng" name="principal_lng">
+                            <div class="form-text">Arrastre el marcador rojo para ubicación exacta. Se guardará como dirección principal.</div>
+                        </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -105,14 +128,84 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
 <script>
+    let registerMap, registerMarker;
+
+    function initRegisterMap() {
+        registerMap = L.map('registerMap').setView([8.37, -62.67], 12); // Default Ciudad Guayana
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(registerMap);
+        
+        registerMarker = L.marker([8.37, -62.67], {
+            draggable: true,
+            title: 'Arrastre para ubicación exacta'
+        }).addTo(registerMap);
+        
+        registerMarker.on('dragend', function(e) {
+            const pos = registerMarker.getLatLng();
+            document.getElementById('principal_lat').value = pos.lat.toFixed(6);
+            document.getElementById('principal_lng').value = pos.lng.toFixed(6);
+            reverseGeocode(pos.lat, pos.lng);
+        });
+    }
+
+async function geocodeToMap(addressId) {
+        const addr = document.getElementById(addressId).value;
+        if (!addr) {
+            alert('Ingrese la dirección primero');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/geocode?address=${encodeURIComponent(addr)}`);
+            const data = await response.json();
+            if (data.success && data.lat && data.lng) {
+                registerMap.setView([data.lat, data.lng], 16);
+                registerMarker.setLatLng([data.lat, data.lng]);
+                document.getElementById('principal_lat').value = data.lat;
+                document.getElementById('principal_lng').value = data.lng;
+                document.getElementById('principal_address').value = data.formatted_address || addr;
+            } else {
+                alert('No se pudo geocodificar. Use el mapa manualmente.');
+            }
+        } catch(e) {
+            alert('Error de geocodificación. Use el mapa manualmente.');
+        }
+    }
+
+    async function reverseGeocode(lat, lng) {
+        // Optional: Fetch reverse geocode from server
+        try {
+            const response = fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('principal_address').value = data.formatted_address;
+            }
+        } catch(e) {}
+    }
+
+    // Password validation
     document.querySelector('form').addEventListener('submit', function(e) {
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirm_password').value;
+        const lat = document.getElementById('principal_lat').value;
+        const lng = document.getElementById('principal_lng').value;
         if (password !== confirm) {
             e.preventDefault();
             alert('Las contraseñas no coinciden.');
+            return;
+        }
+        if (!lat || !lng) {
+            e.preventDefault();
+            alert('Seleccione su ubicación en el mapa.');
+            return;
         }
     });
+
+    document.addEventListener('DOMContentLoaded', initRegisterMap);
 </script>
 {% endblock %}

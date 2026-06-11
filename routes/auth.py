@@ -54,6 +54,9 @@ def register():
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         phone = request.form.get('phone', '').strip()
+        cedula = request.form.get('cedula', '').strip().upper()
+
+        import re
 
         # Validaciones
         errors = []
@@ -69,6 +72,17 @@ def register():
             errors.append('El nombre es obligatorio.')
         if not last_name:
             errors.append('El apellido es obligatorio.')
+        if not cedula or not re.match(r'^[V|E]G?-\d{7,8}$', cedula):
+            errors.append('Cédula inválida. Formato: V-12345678 o E-1234567.')
+        if User.query.filter_by(cedula=cedula).first():
+            errors.append('Esta cédula ya está registrada.')
+        
+        # Validar dirección principal
+        principal_address = request.form.get('principal_address', '').strip()
+        principal_lat = request.form.get('principal_lat', type=float)
+        principal_lng = request.form.get('principal_lng', type=float)
+        if not principal_address or not principal_lat or not principal_lng:
+            errors.append('Debe seleccionar su ubicación exacta en el mapa.')
 
         if User.query.filter_by(username=username).first():
             errors.append('El nombre de usuario ya está en uso.')
@@ -87,6 +101,10 @@ def register():
             first_name=first_name,
             last_name=last_name,
             phone=phone,
+            cedula=cedula,
+            principal_address=request.form.get('principal_address', '').strip(),
+            principal_lat=request.form.get('principal_lat', type=float),
+            principal_lng=request.form.get('principal_lng', type=float),
             role='cliente'
         )
         user.set_password(password)

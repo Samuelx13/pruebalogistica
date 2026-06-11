@@ -74,13 +74,17 @@ def init_database():
         conductor3_user.set_password('conductor123')
         db.session.add(conductor3_user)
 
-        # Clientes
+# Clientes con cédula y dirección principal
         cliente1 = User(
             username='cliente1',
             email='cliente1@email.com',
             first_name='Ana',
             last_name='López',
+            cedula='V-12345678',
             phone='0412-5551234',
+            principal_address='C.C. Orinoco Mall, Puerto Ordaz, Ciudad Guayana, Bolívar, Venezuela',
+            principal_lat=8.3200,
+            principal_lng=-62.6800,
             role='cliente'
         )
         cliente1.set_password('cliente123')
@@ -91,11 +95,30 @@ def init_database():
             email='cliente2@email.com',
             first_name='Luis',
             last_name='Hernández',
+            cedula='E-87654321',
             phone='0414-5555678',
+            principal_address='Av. Guayana 123, Puerto Ordaz, Ciudad Guayana, Bolívar',
+            principal_lat=8.3500,
+            principal_lng=-62.6500,
             role='cliente'
         )
         cliente2.set_password('cliente123')
         db.session.add(cliente2)
+
+        cliente3 = User(
+            username='cliente3',
+            email='cliente3@email.com',
+            first_name='María',
+            last_name='García',
+            cedula='V-11223344',
+            phone='0416-7778899',
+            principal_address='Zona Industrial Mata Oral, Puerto Ordaz, Ciudad Guayana',
+            principal_lat=8.3600,
+            principal_lng=-62.6400,
+            role='cliente'
+        )
+        cliente3.set_password('cliente123')
+        db.session.add(cliente3)
 
         db.session.flush()
         print(f"   ✅ {User.query.count()} usuarios creados.")
@@ -194,9 +217,9 @@ def init_database():
                 'client_phone': '0412-5551234',
                 'client_email': 'cliente1@email.com',
                 'client_user_id': cliente1.id,
-                'address': 'Av. Libertador, Centro Comercial Sambil, Caracas, Venezuela',
-                'lat': 10.4916,
-                'lng': -66.8545,
+'address': 'C.C. Orinoco Mall, Puerto Ordaz, Ciudad Guayana, Bolívar, Venezuela',  # Local Guayana'
+'lat': 8.3200,  # Orinoco Mall Puerto Ordaz'
+'lng': -62.6800,  # Orinoco Mall Puerto Ordaz'
                 'weight_kg': 5.0,
                 'volume_m3': 0.03,
                 'description': 'Caja de electrónicos',
@@ -208,9 +231,9 @@ def init_database():
                 'client_phone': '0414-5555678',
                 'client_email': 'cliente2@email.com',
                 'client_user_id': cliente2.id,
-                'address': 'Av. Francisco de Miranda, Altamira, Caracas, Venezuela',
-                'lat': 10.4961,
-                'lng': -66.8484,
+'address': 'Av. Guayana, Puerto Ordaz, Ciudad Guayana, Bolívar',  # Local Guayana'
+'lat': 8.3500,  # Av. Guayana Puerto Ordaz'
+'lng': -62.6500,  # Av. Guayana Puerto Ordaz'
                 'weight_kg': 12.0,
                 'volume_m3': 0.08,
                 'description': 'Paquete de ropa',
@@ -220,8 +243,8 @@ def init_database():
                 'client_name': 'Roberto Díaz',
                 'client_phone': '0416-3334455',
                 'address': 'Calle Los Palos Grandes, Caracas, Venezuela',
-                'lat': 10.5001,
-                'lng': -66.8440,
+'lat': 8.3400,  # C.C. Cachamay Puerto Ordaz'
+'lng': -62.6600,  # C.C. Cachamay Puerto Ordaz'
                 'weight_kg': 3.5,
                 'volume_m3': 0.02,
                 'description': 'Documentos importantes',
@@ -231,9 +254,9 @@ def init_database():
             {
                 'client_name': 'Carmen Suárez',
                 'client_phone': '0424-6667788',
-                'address': 'Av. Urdaneta, La Candelaria, Caracas, Venezuela',
-                'lat': 10.5050,
-                'lng': -66.9100,
+'address': 'Zona Industrial Mata Oral, Puerto Ordaz, Ciudad Guayana, Bolívar',  # Local Guayana'
+'lat': 8.3600,  # Mata Oral Puerto Ordaz'
+'lng': -62.6400,  # Mata Oral Puerto Ordaz'
                 'weight_kg': 25.0,
                 'volume_m3': 0.15,
                 'description': 'Cajas de suministros de oficina',
@@ -242,9 +265,9 @@ def init_database():
             {
                 'client_name': 'Miguel Torres',
                 'client_phone': '0412-9990011',
-                'address': 'Av. Bolívar, El Silencio, Caracas, Venezuela',
-                'lat': 10.5080,
-                'lng': -66.9150,
+'address': 'Mercado de San Félix, San Félix, Ciudad Guayana, Bolívar',  # Local Guayana'
+'lat': 8.3000,  # Mercado San Félix'
+'lng': -62.6600,  # Mercado San Félix'
                 'weight_kg': 8.0,
                 'volume_m3': 0.05,
                 'description': 'Repuestos automotrices',
@@ -253,9 +276,9 @@ def init_database():
             {
                 'client_name': 'Patricia Morales',
                 'client_phone': '0414-2223344',
-                'address': 'Av. Casanova, Sabana Grande, Caracas, Venezuela',
-                'lat': 10.4950,
-                'lng': -66.8800,
+'address': 'Universidad de Oriente - Núcleo Bolívar, Puerto Ordaz',  # Local Guayana'
+'lat': 8.3300,  # UDO Núcleo Bolívar'
+'lng': -62.6700,  # UDO Núcleo Bolívar'
                 'weight_kg': 15.0,
                 'volume_m3': 0.10,
                 'description': 'Equipos de computación',
@@ -265,7 +288,7 @@ def init_database():
             {
                 'client_name': 'Fernando Rivas',
                 'client_phone': '0416-7778899',
-                'address': 'Calle Real de Sabana Grande, Caracas, Venezuela',
+'address': 'Av. Principal de Upata, Upata, Bolívar',  # Local Guayana'
                 'lat': 10.4940,
                 'lng': -66.8830,
                 'weight_kg': 2.0,

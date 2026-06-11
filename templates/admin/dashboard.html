@@ -208,14 +208,14 @@
     function initMap() {
         const map = new google.maps.Map(document.getElementById('map'), {
             zoom: 12,
-            center: { lat: {{ config.WAREHOUSE_LAT|default(10.4806) }}, lng: {{ config.WAREHOUSE_LNG|default(-66.9036) }} },
+            center: { lat: {{ config.WAREHOUSE_LAT|default(8.298201) }}, lng: {{ config.WAREHOUSE_LNG|default(-62.723474) }} },
             mapTypeControl: false,
             streetViewControl: false
         });
 
         // Marcador del almacén
         new google.maps.Marker({
-            position: { lat: {{ config.WAREHOUSE_LAT|default(10.4806) }}, lng: {{ config.WAREHOUSE_LNG|default(-66.9036) }} },
+            position: { lat: {{ config.WAREHOUSE_LAT|default(8.298201) }}, lng: {{ config.WAREHOUSE_LNG|default(-62.723474) }} },
             map: map,
             title: 'Centro de Distribución',
             icon: {

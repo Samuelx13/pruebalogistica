@@ -123,7 +123,7 @@
 
 <!-- Modal Agregar Pedido -->
 <div class="modal fade" id="addOrderModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="{{ url_for('admin.orders_add') }}">
                 <div class="modal-header">
@@ -131,39 +131,78 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Nombre del Cliente *</label>
-                            <input type="text" class="form-control" name="client_name" placeholder="Nombre completo" required>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" name="client_phone" placeholder="Teléfono">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" name="client_email" placeholder="correo@ejemplo.com">
+                    <!-- Cédula -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Cédula del Cliente (opcional)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="cedula" name="cedula" placeholder="V-12345678" pattern="[V|E]G?-\d{7,8}">
+                                <button type="button" class="btn btn-outline-secondary" onclick="loadClientData()" title="Cargar datos">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Ingrese la cédula para cargar datos del cliente</div>
                         </div>
                     </div>
+                    
+                    <!--Datos del cliente -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre del Cliente *</label>
+                            <input type="text" class="form-control" id="client_name" name="client_name" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" id="client_phone" name="client_phone" placeholder="Teléfono">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="client_email" name="client_email" placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+                    
+                    <!-- Checkbox -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="use_client_address">
+                            <label class="form-check-label" for="use_client_address">
+                                Usar dirección principal del cliente (si está registrado)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Dirección y mapa -->
                     <div class="mb-3">
                         <label class="form-label">Dirección de Entrega *</label>
-                        <input type="text" class="form-control" name="address" placeholder="Dirección completa para geocodificación" required>
-                        <div class="form-text">La dirección será geocodificada automáticamente con Google Maps.</div>
+                        <input type="text" class="form-control mb-2" id="address" name="address" placeholder="Dirección completa" required>
+                        <button type="button" class="btn btn-outline-info btn-sm mb-2" onclick="geocodeAddress('address')">
+                            📍 Centrar en Mapa
+                        </button>
+                        <div id="adminMap" style="height: 200px; border: 2px solid #dee2e6; border-radius: 0.375rem;"></div>
+                        <input type="hidden" id="order_lat" name="lat">
+                        <input type="hidden" id="order_lng" name="lng">
+                        <div class="form-text">Use el mapa para ajustar ubicación exacta</div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    
+                    <!-- Peso y Volumen -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">Peso (kg) *</label>
                             <input type="number" step="0.1" class="form-control" name="weight_kg" value="1.0" required>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">Volumen (m³) *</label>
                             <input type="number" step="0.001" class="form-control" name="volume_m3" value="0.01" required>
                         </div>
                     </div>
+                    
+                    <!-- Descripción -->
                     <div class="mb-3">
                         <label class="form-label">Descripción del Paquete</label>
                         <input type="text" class="form-control" name="description" placeholder="Descripción breve">
                     </div>
+                    
+                    <!-- Instrucciones -->
                     <div class="mb-3">
                         <label class="form-label">Instrucciones Especiales</label>
                         <textarea class="form-control" name="special_instructions" rows="2" placeholder="Instrucciones para el conductor"></textarea>
@@ -217,4 +256,93 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let adminMap, adminMarker;
+
+async function loadClientData() {
+    const cedula = document.getElementById('cedula').value.trim().toUpperCase();
+    if (!cedula) {
+        alert('Ingrese la cédula primero');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/api/user-by-cedula?cedula=${encodeURIComponent(cedula)}`);
+        const data = await response.json();
+        if (data.id) {
+            document.getElementById('client_name').value = data.full_name || '';
+            document.getElementById('client_phone').value = data.phone || '';
+            document.getElementById('client_email').value = data.email || '';
+            document.getElementById('address').value = data.address || '';
+            document.getElementById('use_client_address').checked = !!data.address;
+            
+            if (data.lat && data.lng) {
+                if (adminMap) {
+                    adminMap.setView([data.lat, data.lng], 16);
+                    if (adminMarker) adminMarker.setLatLng([data.lat, data.lng]);
+                }
+                document.getElementById('order_lat').value = data.lat;
+                document.getElementById('order_lng').value = data.lng;
+            }
+            
+            alert('Datos del cliente cargados');
+        } else {
+            alert('Cliente no encontrado');
+        }
+    } catch(e) {
+        alert('Error al cargar datos');
+    }
+}
+
+async function geocodeAddress(inputId) {
+    const addr = document.getElementById(inputId).value;
+    if (!addr) {
+        alert('Ingrese una dirección');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/geocode?address=${encodeURIComponent(addr)}`);
+        const data = await response.json();
+        if (data.success && data.lat && data.lng) {
+            if (adminMap) {
+                adminMap.setView([data.lat, data.lng], 16);
+                if (adminMarker) adminMarker.setLatLng([data.lat, data.lng]);
+            }
+            document.getElementById('order_lat').value = data.lat;
+            document.getElementById('order_lng').value = data.lng;
+            document.getElementById('address').value = data.formatted_address || addr;
+        } else {
+            alert('No se pudo geocodificar la dirección');
+        }
+    } catch(e) {
+        alert('Error de geocodificación');
+    }
+}
+
+function initAdminMap() {
+    if (document.getElementById('adminMap') && !adminMap) {
+        adminMap = L.map('adminMap').setView([8.37, -62.67], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(adminMap);
+        
+        adminMarker = L.marker([8.37, -62.67], {draggable: true}).addTo(adminMap);
+        
+        adminMarker.on('dragend', function() {
+            const pos = adminMarker.getLatLng();
+            document.getElementById('order_lat').value = pos.lat.toFixed(6);
+            document.getElementById('order_lng').value = pos.lng.toFixed(6);
+        });
+    }
+}
+
+// Init map when modal opens
+document.getElementById('addOrderModal').addEventListener('shown.bs.modal', initAdminMap);
+</script>
 {% endblock %}

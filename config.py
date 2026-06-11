@@ -13,6 +13,6 @@ class Config:
     GOOGLE_MAPS_API_KEY = 'AIzaSyC16HuEheZSOlKb2sy4cqIjcXAhXfRdrk8'
 
     # Coordenadas del almacén/centro de distribución (por defecto)
-    WAREHOUSE_LAT = 10.4806
-    WAREHOUSE_LNG = -66.9036
-    WAREHOUSE_ADDRESS = 'Centro de Distribución Principal'
+    WAREHOUSE_LAT = 8.3700  # Puerto Ordaz, Ciudad Guayana
+    WAREHOUSE_LNG = -62.6700  # Puerto Ordaz, Ciudad Guayana
+    WAREHOUSE_ADDRESS = 'Centro de Distribución Ciudad Guayana, Puerto Ordaz, Bolívar, Venezuela'
